@@ -1,0 +1,79 @@
+import cv2
+import face_recognition
+import socket
+import tkinter as tk
+
+
+def send_to_raspberry_pi(name, legal):
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect(('172.20.10.6', 12346))  # Use your Raspberry Pi's IP address here
+ #   client_socket.send(f'{name}'.encode())
+    client_socket.send(f'{legal}'.encode())
+    client_socket.close()
+
+
+known_face_encodings=[]
+known_face_names=[]
+Allowed=["legal","illegal"]
+#"illegal","illegal","legal","legal",'legal',"legal","illegal","legal"]
+
+known_person1_image= face_recognition.load_image_file(r"C:\Users\User\Desktop\term 6\facerecognition\faces\ahmedpic.jpeg")
+known_person2_image= face_recognition.load_image_file(r"C:\Users\User\Desktop\joehatempic.jpg")
+#known_person3_image= face_recognition.load_image_file(r"C:\Users\User\Desktop\facerecognition\a3.jpg")
+
+
+known_person1_encoding=face_recognition.face_encodings(known_person1_image)[0]
+known_person2_encoding=face_recognition.face_encodings(known_person2_image)[0]
+
+known_face_encodings.append(known_person1_encoding)
+known_face_encodings.append(known_person2_encoding)
+
+
+known_face_names.append("Ahmed")
+known_face_names.append("Yousef Hatem")
+
+
+video_capture=cv2.VideoCapture(0)
+recognized_faces = {}
+
+
+while True:
+    ret, frame=video_capture.read()
+    face_locations=face_recognition.face_locations(frame)
+    face_encodings=face_recognition.face_encodings(frame,face_locations)
+
+    for (top, right, bottom, left), face_encoding in zip(face_locations,face_encodings):
+        matches=face_recognition.compare_faces(known_face_encodings,face_encoding)
+        name='unknown'
+
+        if True in matches:
+            first_match_index=matches.index(True)
+            name=known_face_names[first_match_index]
+            legal=Allowed[first_match_index]
+            if name not in recognized_faces:
+                print(name)
+                print(legal)
+                recognized_faces[name] = True
+                #send_to_raspberry_pi(name, legal)
+
+        
+        # Draw a box around the face using
+        # the face's top, right, bottom, and left coordinates
+        cv2.rectangle(frame,(left,top),(right,bottom),(0,0,255),2)
+        # Draw a label with a name below the face
+        cv2.rectangle(frame,(left,bottom-35),(right,bottom),
+                      (0,0,255),cv2.FILLED)
+        font = cv2.FONT_HERSHEY_DUPLEX
+        cv2.putText(frame,name,(left+6,bottom-6),
+                    font,1.05, (255,255,255),1)
+    
+    # Display the resulting image on the screen
+    cv2.imshow('Video', frame)
+
+    # Hit 'q' on the keyboard to quit!
+    if cv2.waitKey(1) & 0xFF == ord('s'):
+        break
+    # Release handle to the webcam video source
+video_capture.release()
+# Close all open windows
+cv2.destroyAllWindows
